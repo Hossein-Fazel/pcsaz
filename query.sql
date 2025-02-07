@@ -512,3 +512,14 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER reduce_stock_number
+AFTER INSERT ON added_to
+FOR EACH ROW
+BEGIN
+    UPDATE product p
+    SET stock_count = stock_count - NEW.quantity
+    WHERE p.id = NEW.product_id;
+END //
+DELIMITER ;
