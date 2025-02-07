@@ -576,3 +576,17 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_use_private_code
+BEFORE INSERT ON applied_to
+FOR EACH ROW
+BEGIN
+    DECLARE is_private BOOLEAN;
+
+    IF EXISTS(SELECT * FROM private_code pc WHERE pc.code = NEW.code and  pc.id != NEW.id) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'This code does not belong to you'
+    END IF;
+END //
+DELIMITER ;
