@@ -523,3 +523,15 @@ BEGIN
     WHERE p.id = NEW.product_id;
 END //
 DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_phone
+BEFORE INSERT ON client
+FOR EACH ROW
+BEGIN
+    IF NEW.phone_number NOT NEW.phone_number '^[0-9]+$' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A phone number should only contain numbers'
+    END IF;
+END //
+DELIMITER ;
