@@ -384,6 +384,9 @@ create table
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
+
+-- ##############################  TRIGGERS ##############################
+
 DELIMITER // 
 CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW BEGIN DECLARE 
             
@@ -419,6 +422,7 @@ DELIMITER //
         
     END//
 DELIMITER ;
+
 DELIMITER //
     CREATE PROCEDURE loop_through_refer_list()
     BEGIN
@@ -458,4 +462,35 @@ BEGIN
         SELECT * FROM referral_hierarchy);
         CALL loop_through_refer_list();
 END//
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER check_cart_count
+BEFORE INSERT ON shopping_cart
+FOR EACH ROW
+BEGIN
+    DECLARE is_vip BOOLEAN;
+    DECLARE used_cart INTEGER;
+
+    SELECT COUNT(id) INTO is_vip
+    FROM vip_client vc
+    WHERE NEW.id = vc.id;
+
+    SELECT COUNT(*) INTO used_cart
+    FROM shopping_cart sc
+    WHERE sc.id = NEW.id;
+
+    IF is_vip = TRUE THEN
+        IF (used_cart + 1) > 5 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The vip users can not have more than 5 shopping cart';
+        END IF;
+    ELSE
+        IF (used_cart + 1) > 1 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Users can not have more than 1 shopping cart';
+        END IF;
+    END IF;
+END //
 DELIMITER ;
