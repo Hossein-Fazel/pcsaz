@@ -494,3 +494,21 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_existance_of_product
+BEFORE INSERT ON added_to
+FOR EACH ROW
+BEGIN
+    DECLARE total INTEGER;
+
+    SELECT stock_count INTO total
+    FROM product p
+    WHERE p.id = NEW.product_id;
+
+    IF total < NEW.quantity THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock'
+    END IF;
+END //
+DELIMITER ;
