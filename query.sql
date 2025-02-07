@@ -535,3 +535,44 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_discount_usage_count
+BEFORE INSERT ON applied_to
+FOR EACH ROW
+BEGIN
+    DECLARE number_of_usage INTEGER;
+    DECLARE usage_limit INTEGER;
+    
+    SELECT COUNT(*) INTO number_of_usage
+    FROM applied_to apt
+    WHERE apt.id = NEW.id and apt.code;
+
+    SELECT usage_count INTO usage_limit
+    FROM discount_code dc
+    WHERE dc.code = NEW.code;
+
+    IF (number_of_usage + 1) > usage_limit THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'usage limit exceeeded'
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_use_expired_discode
+BEFORE INSERT ON applied_to
+FOR EACH ROW
+BEGIN
+    DECLARE exp_date TIMESTAMP;
+
+    SELECT expiration_date INTO exp_date
+    FROM discount_code dc
+    WHERE dc.code = NEW.code;
+
+    IF exp_date > NOW() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'This code is expired'
+    END IF;
+END //
+DELIMITER ;
