@@ -730,4 +730,16 @@ DO
             END LOOP;
         CLOSE blocked_cart_list;
     END //
+
+-- ##############################  EVENTS ##############################
+
+DELIMITER //
+CREATE EVENT expire_vip_user
+ON SCHEDULE EVERY 1 MINUTE
+DO
+BEGIN
+    -- CHECK IF EXPIRE 
+    DELETE FROM PEYSAZ.VIP_CLIENTS
+    WHERE DATE_FORMAT(subscription_expiration_time, '%Y-%m-%d %H:%i:00') <= DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:00');
+END //
 DELIMITER ;
