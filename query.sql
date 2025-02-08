@@ -496,19 +496,22 @@ END //
 DELIMITER ;
 
 DELIMITER //
-CREATE TRIGGER check_existance_of_product
+CREATE TRIGGER check_existence_of_product
 BEFORE INSERT ON added_to
 FOR EACH ROW
 BEGIN
     DECLARE total INTEGER;
-
     SELECT stock_count INTO total
     FROM product p
     WHERE p.id = NEW.product_id;
-
-    IF total < NEW.quantity THEN
+    IF total = 0 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock'
+        SET MESSAGE_TEXT = 'The product is non existent.'
+    ELSE
+        IF total < NEW.quantity THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock.';
+        END IF;
     END IF;
 END //
 DELIMITER ;
@@ -546,15 +549,15 @@ BEGIN
     
     SELECT COUNT(*) INTO number_of_usage
     FROM applied_to apt
-    WHERE apt.id = NEW.id and apt.code;
+    WHERE apt.id = NEW.id AND apt.code = NEW.code;
 
     SELECT usage_count INTO usage_limit
-    FROM discount_code dc
-    WHERE dc.code = NEW.code;
+    FROM discount_code as dc , public_code as pc , private_code
+    WHERE (NEW.code = pc.code OR (NEW.code = private_code.code AND NEW.id = private_code.id));
 
     IF (number_of_usage + 1) > usage_limit THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'usage limit exceeeded'
+        SET MESSAGE_TEXT = 'Usage limit has been exceeded'
     END IF;
 END //
 DELIMITER ;
@@ -570,9 +573,9 @@ BEGIN
     FROM discount_code dc
     WHERE dc.code = NEW.code;
 
-    IF exp_date > NOW() THEN
+    IF exp_date < NOW() THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'This code is expired'
+        SET MESSAGE_TEXT = 'This code is expired';
     END IF;
 END //
 DELIMITER ;
@@ -590,3 +593,24 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+-- check transaction for insert into issued for
+
+DELIMITER //
+CREATE TRIGGER free_shopping_cart
+AFTER INSERT ON issued_for
+FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+
+    SELECT transaction_status INTO trans_status 
+    FROM transaction t
+    WHERE NEW.tracking_code = t.tracking_code;
+
+    IF trans_status = 'Successful' THEN
+        UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND number = NEW.cart_number ; 
+    END IF;
+END //
+DELIMITER ;
+
+
