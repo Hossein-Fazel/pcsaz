@@ -603,17 +603,89 @@ FOR EACH ROW
 BEGIN
     DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
 
-    SELECT transaction_status INTO trans_status 
+    SELECT t.transaction_status INTO trans_status
     FROM transaction t
     WHERE NEW.tracking_code = t.tracking_code;
 
     IF trans_status = 'Successful' THEN
-        UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND shopping_cart.cart_number = NEW.cart_number ; 
+        IF ((NEW.id NOT IN (SELECT id FROM vip_client)) AND NEW.cart_number >= 2) THEN
+            UPDATE shopping_cart SET cart_status ='blocked' WHERE NEW.id = shopping_cart.id AND shopping_cart.cart_number = NEW.cart_number;
+        ELSE
+            UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND shopping_cart.cart_number = NEW.cart_number ; 
+        END IF;
     END IF;
 END //
 DELIMITER ;
 
 
+DELIMITER //
+CREATE TRIGGER disable_carts_for_expired_vip_membership
+AFTER DELETE ON vip_client
+FOR EACH ROW
+BEGIN
+    UPDATE shopping_cart SET cart_status ='blocked' WHERE OLD.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER charge_wallet
+AFTER INSERT ON deposits_into_wallet
+FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+
+    SELECT t.transaction_status INTO trans_status
+    FROM transaction t
+    WHERE NEW.tracking_code = t.tracking_code;
+
+    IF trans_status = 'Successful' THEN
+        UPDATE client SET wallet_balance = wallet_balance + NEW.amount WHERE NEW.id = client.id;
+    END IF;
+END //
+DELIMITER ;
+
+CREATE FUNCTION subscription_amount ()
+    RETURNS INTEGER DETERMINISTIC
+    RETURN 20000;
+DELIMITER //
+CREATE TRIGGER transaction_for_subscription
+AFTER INSERT ON subscribe
+FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+    DECLARE  trans_timestamp TIMESTAMP;
+    SELECT t.transaction_status,t.transaction_timestamp INTO trans_status,trans_timestamp
+    FROM transaction AS t WHERE NEW.tracking_code = t.tracking_code;
+
+    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
+        UPDATE client SET wallet_balance = wallet_balance - subscription_amount() WHERE NEW.id = client.id;
+        INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
+    ELSE
+        IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM bank_transaction)) THEN
+            INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER transaction_for_shopping
+AFTER INSERT ON issued_for
+FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+    DECLARE shopping_cart_price BIGINT;
+
+    SELECT t.transaction_status INTO trans_status FROM transaction t WHERE NEW.tracking_code = t.tracking_code;
+    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE NEW.id = id AND NEW.cart_number = cart_number AND NEW.locked_number = locked_number;
+    
+    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
+        UPDATE client SET wallet_balance = wallet_balance - shopping_cart_price WHERE NEW.id = client.id;
+    END IF;
+END //
+DELIMITER ;
+-- ##############################  EVENTS ##############################
 DELIMITER //
     CREATE PROCEDURE restore_products_from_blocked_cart(user_id INTEGER,shopping_cart_number INTEGER,locked_cart_number INTEGER)
     BEGIN
@@ -646,7 +718,6 @@ DELIMITER //
 DELIMITER ;
 
 -- locked number have to be auto increment
-
 DELIMITER //
 SET GLOBAL event_scheduler = ON;
 CREATE EVENT check_cart_payment
@@ -730,8 +801,6 @@ DO
             END LOOP;
         CLOSE blocked_cart_list;
     END //
-
--- ##############################  EVENTS ##############################
 
 DELIMITER //
 CREATE EVENT expire_vip_user
