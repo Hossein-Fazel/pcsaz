@@ -608,9 +608,126 @@ BEGIN
     WHERE NEW.tracking_code = t.tracking_code;
 
     IF trans_status = 'Successful' THEN
-        UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND number = NEW.cart_number ; 
+        UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND shopping_cart.cart_number = NEW.cart_number ; 
     END IF;
 END //
 DELIMITER ;
 
 
+DELIMITER //
+    CREATE PROCEDURE restore_products_from_blocked_cart(user_id INTEGER,shopping_cart_number INTEGER,locked_cart_number INTEGER)
+    BEGIN
+        DECLARE product_quantity INTEGER;
+        DECLARE pr_id VARCHAR(20);
+
+        DECLARE done BOOLEAN DEFAULT FALSE;
+        DECLARE product_list CURSOR FOR  
+        SELECT adt.product_id,adt.quantity FROM added_to AS adt
+        WHERE adt.id = user_id AND adt.cart_number = shopping_cart_number AND adt.locked_number = locked_cart_number;
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        OPEN product_list;
+            loop_through:
+            LOOP
+                FETCH NEXT FROM product_list INTO pr_id,product_quantity;
+                IF done THEN LEAVE loop_through;
+                ELSE
+                    UPDATE product SET stock_count = stock_count + product_quantity WHERE id = pr_id;
+                END IF;
+            END LOOP;
+        CLOSE product_list;  
+    END//
+DELIMITER ;
+
+DELIMITER //
+    CREATE PROCEDURE block_cart(user_id INTEGER,shopping_cart_number INTEGER)
+    BEGIN
+        UPDATE shopping_cart SET cart_status = 'blocked' WHERE id = user_id AND cart_number = shopping_cart_number;
+    END//
+DELIMITER ;
+
+-- locked number have to be auto increment
+
+DELIMITER //
+SET GLOBAL event_scheduler = ON;
+CREATE EVENT check_cart_payment
+ON SCHEDULE EVERY 1 HOUR 
+STARTS CURRENT_TIMESTAMP + INTERVAL 3 DAY
+ON COMPLETION PRESERVE
+DO 
+    BEGIN
+        DECLARE done BOOLEAN DEFAULT FALSE;
+        DECLARE user_id INTEGER;
+        DECLARE shopping_cart_number INTEGER;
+        DECLARE locked_cart_number INTEGER;
+        DECLARE lock_timestamp TIMESTAMP;
+        DECLARE newest_cart_timestamp TIMESTAMP;
+        DECLARE locked_cart_list CURSOR FOR  
+        SELECT lsc.id,lsc.cart_number,lsc.locked_number,lsc.locked_timestamp FROM locked_shopping_cart AS lsc,issued_for AS issue , transaction AS ta
+        WHERE (lsc.id = issue.id AND lsc.cart_number = issue.cart_number AND lsc.locked_number = issue.locked_number AND ta.tracking_code = issue.tracking_code AND ta.transaction_status != 'Successful') UNION  (SELECT lsc.id,lsc.cart_number,lsc.locked_number,lsc.locked_timestamp FROM locked_shopping_cart AS lsc WHERE ((lsc.id,lsc.cart_number,lsc.locked_number) NOT IN (SELECT i.id,i.cart_number,i.locked_number FROM issued_for AS i)));
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        OPEN locked_cart_list;
+            loop_through:
+            LOOP
+                FETCH NEXT FROM locked_cart_list INTO user_id,shopping_cart_number,locked_cart_number,lock_timestamp;
+                IF done THEN LEAVE loop_through;
+                ELSE
+                    SELECT MAX(locked_timestamp) INTO newest_cart_timestamp FROM locked_shopping_cart WHERE id= user_id AND cart_number = shopping_cart_number GROUP BY id,cart_number;
+                    IF ((lock_timestamp = newest_cart_timestamp) AND TIMESTAMPDIFF(DAY,lock_timestamp,CURRENT_TIMESTAMP()) > 3) THEN
+                        CALL restore_products_from_blocked_cart(user_id,shopping_cart_number,locked_cart_number);
+                        CALL block_cart(user_id,shopping_cart_number);
+                    END IF;
+                END IF;
+            END LOOP;
+        CLOSE locked_cart_list;
+    END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE activate_cart(user_id INTEGER,shopping_cart_number INTEGER)
+BEGIN
+    UPDATE shopping_cart SET cart_status = 'active' WHERE id = user_id AND cart_number = shopping_cart_number;
+END// DELIMITER ;
+
+
+DELIMITER //
+CREATE EVENT check_blocked_cart_for_activating
+ON SCHEDULE EVERY 1 HOUR 
+STARTS CURRENT_TIMESTAMP + INTERVAL 7 DAY
+ON COMPLETION PRESERVE
+DO 
+    BEGIN
+        DECLARE done BOOLEAN DEFAULT FALSE;
+        DECLARE is_vip BOOLEAN DEFAULT FALSE;
+        DECLARE user_id INTEGER;
+        DECLARE shopping_cart_number INTEGER;
+        DECLARE locked_cart_number INTEGER;
+        DECLARE lock_timestamp TIMESTAMP;
+        DECLARE newest_cart_timestamp TIMESTAMP;
+
+        DECLARE blocked_cart_list CURSOR FOR  
+        SELECT sc.id,sc.cart_number,lsc.locked_timestamp FROM shopping_cart AS sc , locked_shopping_cart AS lsc
+        WHERE sc.cart_status = 'blocked' AND sc.id = lsc.id AND sc.cart_number = lsc.cart_number;
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        OPEN blocked_cart_list;
+            loop_through:
+            LOOP
+                FETCH NEXT FROM blocked_cart_list INTO user_id,shopping_cart_number,lock_timestamp;
+                IF done THEN LEAVE loop_through;
+                ELSE
+                    SELECT MAX(locked_timestamp) INTO newest_cart_timestamp FROM locked_shopping_cart WHERE id= user_id AND cart_number = shopping_cart_number GROUP BY id,cart_number;
+                    IF ((lock_timestamp = newest_cart_timestamp) AND TIMESTAMPDIFF(DAY,lock_timestamp,CURRENT_TIMESTAMP()) >= 7) THEN
+                        
+                        IF user_id IN (SELECT id FROM vip_client) THEN
+                            CALL activate_cart(user_id,shopping_cart_number);
+                        ELSE
+                            IF(shopping_cart_number = 1) THEN
+                                CALL activate_cart(user_id,shopping_cart_number);
+                            END IF;
+                        END IF;
+                    END IF;
+                    
+                END IF;
+            END LOOP;
+        CLOSE blocked_cart_list;
+    END //
+DELIMITER ;
