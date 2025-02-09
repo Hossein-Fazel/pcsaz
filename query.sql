@@ -689,10 +689,10 @@ BEGIN
 END //
 DELIMITER ;
 -- ##############################  EVENTS ##############################
+SET GLOBAL event_scheduler = ON;
 
 -- locked number have to be auto increment
 DELIMITER //
-SET GLOBAL event_scheduler = ON;
 CREATE EVENT check_cart_payment
 ON SCHEDULE EVERY 1 HOUR 
 STARTS CURRENT_TIMESTAMP + INTERVAL 3 DAY
@@ -792,4 +792,48 @@ BEGIN
         END LOOP;
     CLOSE expired_vip_list;
 END //
+DELIMITER ;
+
+DELIMITER //
+CREATE EVENT monthly_add_to_vip_wallet
+ON SCHEDULE EVERY 1 MONTH
+DO
+BEGIN
+    DECLARE user_id INTEGER;
+    DECLARE total_purchase DECIMAL(10,2);
+    DECLARE done INT DEFAULT 0;
+    DECLARE cur CURSOR FOR 
+        SELECT id 
+        FROM vip_client 
+        WHERE Subscription_expiration_time >= CURRENT_TIMESTAMP;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    OPEN cur;
+
+    calc_loop:
+    LOOP
+        FETCH cur INTO user_id;
+        IF done THEN
+            LEAVE calc_loop;
+        END IF;
+
+        SELECT SUM(adt.cart_price * 0.15) 
+        INTO total_purchase
+        FROM issued_for isu
+        JOIN locked_shopping_cart locked_cart ON isu.id = locked_cart.id AND isu.cart_number = locked_cart.number
+        JOIN added_to adt ON locked_cart.id = adt.id AND locked_cart.cart_number = adt.cart_number AND locked_cart.locked_Number = adt.locked_number
+        WHERE isu.id = user_id AND i IN (
+              SELECT tracking_code 
+              FROM transaction
+              WHERE transaction_status = 'Successful' AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
+          );
+
+        IF total_purchase IS NOT NULL THEN
+            UPDATE client
+            SET wallet_balance = wallet_balance + total_purchase
+            WHERE id = user_id;
+        END IF;
+    END LOOP;
+    CLOSE cur;
+END//
 DELIMITER ;
