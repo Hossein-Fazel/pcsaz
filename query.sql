@@ -428,6 +428,45 @@ BEGIN
     UPDATE shopping_cart SET cart_status = 'active' WHERE id = user_id AND cart_number = shopping_cart_number;
 END// DELIMITER ;
 
+DELIMITER //
+CREATE PROCEDURE calculate_cart_price (user_id INTEGER,shopping_cart_number INTEGER,locked_cart_number INTEGER,OUT result BIGINT)
+BEGIN
+    DECLARE shopping_cart_price BIGINT;
+    DECLARE cart_price_after_applying_code BIGINT;
+    DECLARE discount_code_amount DECIMAL;
+    DECLARE discount_code_limit INTEGER;
+    DECLARE dis_code INTEGER;
+    DECLARE done TINYINT DEFAULT FALSE;
+
+    DECLARE code_list CURSOR FOR  
+    SELECT code FROM applied_to AS apt 
+    WHERE user_id = apt.id AND shopping_cart_number = apt.cart_number AND locked_cart_number = apt.locked_number ORDER BY apt.applied_timestamp;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE user_id = id AND shopping_cart_number = cart_number AND locked_cart_number = locked_number;
+    SET cart_price_after_applying_code = shopping_cart_price;
+    OPEN code_list;
+        loop_through:
+        LOOP
+            FETCH NEXT FROM code_list INTO dis_code;
+            IF done THEN LEAVE loop_through;
+            ELSE
+                SELECT dc.amount,dc.discount_limit INTO discount_code_amount,discount_code_limit FROM discount_code AS dc WHERE dis_code = dc.code;
+                IF (discount_code_amount <= 100) THEN
+                    IF (ROUND((cart_price_after_applying_code * discount_code_amount) / 100 ,0) > discount_code_limit ) THEN
+                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount is greater than code''s limit';
+                    ELSE
+                        SET cart_price_after_applying_code = cart_price_after_applying_code - (ROUND((cart_price_after_applying_code * discount_code_amount) / 100 ,0));
+                    END IF;
+                ELSE 
+                    SET cart_price_after_applying_code = cart_price_after_applying_code - discount_code_amount;
+                END IF;
+            END IF;
+        END LOOP;
+    CLOSE code_list;  
+            
+    SET result = cart_price_after_applying_code;
+END// DELIMITER ;
+
 -- ##############################  TRIGGERS ##############################
 
 DELIMITER // 
@@ -447,6 +486,15 @@ CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW B
 END IF;
 END // DELIMITER ;
 
+DELIMITER // 
+CREATE TRIGGER check_discount_code_limit_for_non_percentage_code BEFORE INSERT ON discount_code FOR EACH ROW
+BEGIN
+    IF (NEW.amount > 100) THEN
+        IF (NEW.amount != NEW.discount_limit ) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount must be equal to discount limit for non percentage codes';
+        END IF;
+    END IF;
+END // DELIMITER ;
 
 DELIMITER //
 CREATE TRIGGER issue_discount_code_from_referral AFTER INSERT ON refer FOR EACH ROW 
@@ -605,6 +653,24 @@ BEGIN
 END //
 DELIMITER ;
 
+
+DELIMITER //
+CREATE TRIGGER check_discount_code_limit BEFORE INSERT ON applied_to FOR EACH ROW
+BEGIN
+    DECLARE shopping_cart_price BIGINT;
+    DECLARE discount_code_amount DECIMAL;
+    DECLARE discount_code_limit INTEGER;
+
+    CALL calculate_cart_price(NEW.id,NEW.cart_number,NEW.locked_number,shopping_cart_price); 
+    SELECT amount,discount_limit INTO discount_code_amount,discount_code_limit FROM discount_code dc WHERE dc.code = NEW.code;
+    IF (discount_code_amount <= 100) THEN
+        IF (ROUND((shopping_cart_price * discount_code_amount) / 100 ,0) > discount_code_limit ) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount is greater than code''s limit';
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
 -- check transaction for insert into issued for
 
 DELIMITER //
@@ -681,8 +747,7 @@ BEGIN
     DECLARE shopping_cart_price BIGINT;
 
     SELECT t.transaction_status INTO trans_status FROM transaction t WHERE NEW.tracking_code = t.tracking_code;
-    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE NEW.id = id AND NEW.cart_number = cart_number AND NEW.locked_number = locked_number;
-    
+    CALL calculate_cart_price(NEW.id,NEW.cart_number,NEW.locked_number,shopping_cart_price); 
     IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
         UPDATE client SET wallet_balance = wallet_balance - shopping_cart_price WHERE NEW.id = client.id;
     END IF;
