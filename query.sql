@@ -5,8 +5,7 @@ create database pcsaz;
 
 USE pcsaz;
 
-create table
-    product (
+create table product (
         id INTEGER primary key AUTO_INCREMENT,
         category enum (
             'Motherboard',
@@ -26,8 +25,7 @@ create table
         model VARCHAR(40) not null
     );
 
-create table
-    hdd (
+create table hdd (
         id INTEGER primary key,
         rotational_speed INTEGER not null,
         wattage INTEGER not null,
@@ -38,8 +36,7 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    cp_case (
+create table cp_case (
         id INTEGER primary key,
         number_of_fans smallint not null,
         fan_size smallint not null,
@@ -50,7 +47,7 @@ create table
             'Mid Tower',
             'Mini Tower',
             'SFF'
-        ) not null,
+            ) not null,
         material enum (
             'Steel',
             'Aluminum',
@@ -58,7 +55,7 @@ create table
             'Plastic',
             'Acrylic',
             'Mesh'
-        ) not null,
+            ) not null,
         color enum (
             'Black',
             'White',
@@ -69,15 +66,14 @@ create table
             'Yellow',
             'Brown',
             'Orange'
-        ) not null,
+            ) not null,
         depth smallint not null,
         height smallint not null,
         width smallint not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    power_supply (
+create table power_supply (
         id INTEGER primary key,
         supported_wattage INTEGER not null,
         depth smallint not null,
@@ -86,8 +82,7 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    gpu (
+create table gpu (
         id INTEGER primary key,
         clock_speed smallint not null,
         ram_size smallint not null,
@@ -99,16 +94,14 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    ssd (
+create table ssd (
         id INTEGER primary key,
         wattage INTEGER not null,
         capacity smallint not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    ram_stick (
+create table ram_stick (
         id INTEGER primary key,
         frequency INTEGER not null,
         generation smallint not null,
@@ -120,8 +113,7 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    motherboard (
+create table motherboard (
         id INTEGER primary key,
         chipset VARCHAR(40) not null,
         num_of_memory_slots smallint not null,
@@ -133,8 +125,7 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    cpu (
+create table cpu (
         id INTEGER primary key,
         maximum_addressable_memory_limit smallint not null,
         boost_frequency smallint not null,
@@ -153,8 +144,7 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    cooler (
+create table cooler (
         id INTEGER primary key,
         maximum_rotational_speed INTEGER not null,
         wattage INTEGER not null,
@@ -173,8 +163,7 @@ create table
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    cc_socket_compatible_with (
+create table cc_socket_compatible_with (
         cooler_id INTEGER,
         cpu_id INTEGER,
         primary key (cooler_id, cpu_id),
@@ -182,8 +171,7 @@ create table
         foreign key (cpu_id) references cpu (id) on delete cascade on update cascade
     );
 
-create table
-    mc_socket_compatible_with (
+create table mc_socket_compatible_with (
         motherboard_id INTEGER,
         cpu_id INTEGER,
         primary key (motherboard_id, cpu_id),
@@ -191,8 +179,7 @@ create table
         foreign key (cpu_id) references cpu (id) on delete cascade on update cascade
     );
 
-create table
-    rm_slot_compatible_with (
+create table rm_slot_compatible_with (
         motherboard_id INTEGER,
         ram_id INTEGER,
         primary key (motherboard_id, ram_id),
@@ -200,8 +187,7 @@ create table
         foreign key (ram_id) references ram_stick (id) on delete cascade on update cascade
     );
 
-create table
-    gm_slot_compatible_with (
+create table gm_slot_compatible_with (
         motherboard_id INTEGER,
         gpu_id INTEGER,
         primary key (motherboard_id, gpu_id),
@@ -209,8 +195,7 @@ create table
         foreign key (gpu_id) references gpu (id) on delete cascade on update cascade
     );
 
-create table
-    sm_slot_compatible_with (
+create table sm_slot_compatible_with (
         motherboard_id INTEGER,
         ssd_id INTEGER,
         primary key (motherboard_id, ssd_id),
@@ -218,8 +203,7 @@ create table
         foreign key (ssd_id) references ssd (id) on delete cascade on update cascade
     );
 
-create table
-    connector_compatible_with (
+create table connector_compatible_with (
         gpu_id INTEGER,
         power_id INTEGER,
         primary key (gpu_id, power_id),
@@ -227,33 +211,29 @@ create table
         foreign key (power_id) references power_supply (id) on delete cascade on update cascade
     );
 
-create table
-    client (
+create table client (
         id INTEGER AUTO_INCREMENT primary key,
-        phone_number VARCHAR(11) unique,
+        phone_number CHAR(11) unique,
         first_name VARCHAR(50) not null,
         last_name VARCHAR(50) not null,
         wallet_balance integer default 0,
         referral_code VARCHAR(20) not null unique,
         client_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP
     );
-create table
-    vip_client (
+create table vip_client (
         id INTEGER primary key,
         subscription_expiration_time TIMESTAMP,
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
-create table
-    refer (
+create table refer (
         referee INTEGER primary key,
         referrer INTEGER not null,
         foreign key (referee) references client (id) on delete cascade on update cascade,
         foreign key (referrer) references client (id) on delete cascade on update cascade
     );
 
-create table
-    address (
+create table address (
         id INTEGER,
         province VARCHAR(50),
         remainder VARCHAR(300),
@@ -261,8 +241,7 @@ create table
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
-create table
-    discount_code (
+create table discount_code (
         code INTEGER primary key AUTO_INCREMENT,
         amount DECIMAL not null,
         discount_limit INTEGER not null,
@@ -270,8 +249,7 @@ create table
         expiration_date TIMESTAMP not null
     );
 
-create table
-    private_code (
+create table private_code (
         code INTEGER,
         id INTEGER,
         private_code_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP,
@@ -280,15 +258,13 @@ create table
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
-create table
-    public_code (
+create table public_code (
         code INTEGER,
         primary key (code),
         foreign key (code) references discount_code (code) on delete cascade on update cascade
     );
 
-create table
-    shopping_cart (
+create table shopping_cart (
         id INTEGER,
         cart_number INTEGER,
         cart_status ENUM ('active', 'blocked', 'locked') not null default 'active',
@@ -296,8 +272,7 @@ create table
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
-create table
-    locked_shopping_cart (
+create table locked_shopping_cart (
         id INTEGER,
         cart_number INTEGER,
         locked_number INTEGER,
@@ -306,8 +281,7 @@ create table
         foreign key (id, cart_number) references shopping_cart (id, cart_number) on delete cascade on update cascade
     );
 
-create table
-    added_to (
+create table added_to (
         id INTEGER,
         cart_number INTEGER,
         locked_number INTEGER,
@@ -319,8 +293,7 @@ create table
         foreign key (product_id) references product (id) on delete cascade on update cascade
     );
 
-create table
-    applied_to (
+create table applied_to (
         id INTEGER,
         cart_number INTEGER,
         locked_number INTEGER,
@@ -331,30 +304,26 @@ create table
         foreign key (code) references discount_code (code) on delete cascade on update cascade
     );
 
-create table
-    transaction (
+create table transaction (
         tracking_code VARCHAR(15) primary key,
         transaction_status enum ('Successful', 'Unsuccessful', 'Semi successful') not null default 'Unsuccessful',
         transaction_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP
     );
 
-create table
-    bank_transaction (
+create table bank_transaction (
         tracking_code VARCHAR(15),
         card_number VARCHAR(16) not null,
         primary key (tracking_code),
         foreign key (tracking_code) references transaction (tracking_code) on delete cascade on update cascade
     );
 
-create table
-    wallet_transaction (
+create table wallet_transaction (
         tracking_code VARCHAR(15),
         primary key (tracking_code),
         foreign key (tracking_code) references transaction (tracking_code) on delete cascade on update cascade
     );
 
-create table
-    subscribe (
+create table subscribe (
         tracking_code VARCHAR(15),
         id INTEGER,
         primary key (tracking_code),
@@ -362,8 +331,7 @@ create table
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
-create table
-    issued_for (
+create table issued_for (
         tracking_code VARCHAR(15),
         id INTEGER,
         cart_number INTEGER,
@@ -373,8 +341,7 @@ create table
         foreign key (id, cart_number, locked_number) references locked_shopping_cart (id, cart_number, locked_number) on delete cascade on update cascade
     );
 
-create table
-    deposits_into_wallet (
+create table deposits_into_wallet (
         tracking_code VARCHAR(15),
         id INTEGER,
         amount INTEGER not null,
@@ -383,27 +350,7 @@ create table
         foreign key (id) references client (id) on delete cascade on update cascade
     );
 
-
--- ##############################  TRIGGERS ##############################
-
-DELIMITER // 
-CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW BEGIN DECLARE 
-            
-        shopping_cart_status ENUM ('active', 'blocked', 'locked');
-        SELECT
-            cart_status INTO shopping_cart_status
-        FROM
-            shopping_cart
-        WHERE
-            id = NEW.id
-            AND cart_number = NEW.cart_number;
-
-        IF (shopping_cart_status = 'blocked') THEN signal sqlstate '45000'
-        SET
-            MESSAGE_TEXT = 'The cart is blocked';
-END IF;
-END // DELIMITER ;
-
+-- ##############################  PROCEDURES ##############################
 
 DELIMITER //
     CREATE PROCEDURE issue_private_discount_code(ref_id INTEGER,ref_level INTEGER)
@@ -445,247 +392,6 @@ DELIMITER //
 DELIMITER ;
 
 DELIMITER //
-CREATE TRIGGER issue_discount_code_from_referral AFTER INSERT ON refer FOR EACH ROW 
-BEGIN
-        DROP TEMPORARY TABLE IF EXISTS referral_hierarchy_temp;
-        CREATE TEMPORARY TABLE referral_hierarchy_temp AS
-        (WITH RECURSIVE referral_hierarchy(referrer,referee) AS 
-        (
-            SELECT referrer,referee FROM refer
-            WHERE NEW.referee = referee
-            UNION
-            SELECT r.referrer,r.referee
-            FROM refer AS r,referral_hierarchy AS rh
-            WHERE rh.referrer = r.referee
-        )
-        SELECT * FROM referral_hierarchy);
-        CALL loop_through_refer_list();
-END//
-DELIMITER ;
-
-
-DELIMITER //
-CREATE TRIGGER check_cart_count
-BEFORE INSERT ON shopping_cart
-FOR EACH ROW
-BEGIN
-    DECLARE is_vip TINYINT;
-    DECLARE used_cart INTEGER;
-
-    SELECT COUNT(id) INTO is_vip
-    FROM vip_client vc
-    WHERE NEW.id = vc.id;
-
-    SELECT COUNT(*) INTO used_cart
-    FROM shopping_cart sc
-    WHERE sc.id = NEW.id;
-
-    IF is_vip = TRUE THEN
-        IF (used_cart + 1) > 5 THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'The vip users can not have more than 5 shopping cart';
-        END IF;
-    ELSE
-        IF (used_cart + 1) > 1 THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Users can not have more than 1 shopping cart';
-        END IF;
-    END IF;
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER check_existence_of_product
-BEFORE INSERT ON added_to
-FOR EACH ROW
-BEGIN
-    DECLARE total INTEGER;
-    SELECT stock_count INTO total
-    FROM product p
-    WHERE p.id = NEW.product_id;
-    IF total = 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'The product is non existent.'
-    ELSE
-        IF total < NEW.quantity THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock.';
-        END IF;
-    END IF;
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER reduce_stock_number
-AFTER INSERT ON added_to
-FOR EACH ROW
-BEGIN
-    UPDATE product p
-    SET stock_count = stock_count - NEW.quantity
-    WHERE p.id = NEW.product_id;
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER check_phone
-BEFORE INSERT ON client
-FOR EACH ROW
-BEGIN
-    IF NEW.phone_number NOT NEW.phone_number '^[0-9]+$' THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'A phone number should only contain numbers'
-    END IF;
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER check_discount_usage_count
-BEFORE INSERT ON applied_to
-FOR EACH ROW
-BEGIN
-    DECLARE number_of_usage INTEGER;
-    DECLARE usage_limit INTEGER;
-    
-    SELECT COUNT(*) INTO number_of_usage
-    FROM applied_to apt
-    WHERE apt.id = NEW.id AND apt.code = NEW.code;
-
-    SELECT usage_count INTO usage_limit
-    FROM discount_code as dc , public_code as pc , private_code
-    WHERE (NEW.code = pc.code OR (NEW.code = private_code.code AND NEW.id = private_code.id));
-
-    IF (number_of_usage + 1) > usage_limit THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Usage limit has been exceeded'
-    END IF;
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER check_use_expired_discode
-BEFORE INSERT ON applied_to
-FOR EACH ROW
-BEGIN
-    DECLARE exp_date TIMESTAMP;
-
-    SELECT expiration_date INTO exp_date
-    FROM discount_code dc
-    WHERE dc.code = NEW.code;
-
-    IF exp_date < NOW() THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'This code is expired';
-    END IF;
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER check_use_private_code
-BEFORE INSERT ON applied_to
-FOR EACH ROW
-BEGIN
-    DECLARE is_private TINYINT;
-
-    IF EXISTS(SELECT * FROM private_code pc WHERE pc.code = NEW.code and  pc.id != NEW.id) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'This code does not belong to you'
-    END IF;
-END //
-DELIMITER ;
-
--- check transaction for insert into issued for
-
-DELIMITER //
-CREATE TRIGGER free_shopping_cart
-AFTER INSERT ON issued_for
-FOR EACH ROW
-BEGIN
-    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
-
-    SELECT t.transaction_status INTO trans_status
-    FROM transaction t
-    WHERE NEW.tracking_code = t.tracking_code;
-
-    IF trans_status = 'Successful' THEN
-        IF ((NEW.id NOT IN (SELECT id FROM vip_client)) AND NEW.cart_number >= 2) THEN
-            UPDATE shopping_cart SET cart_status ='blocked' WHERE NEW.id = shopping_cart.id AND shopping_cart.cart_number = NEW.cart_number;
-        ELSE
-            UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND shopping_cart.cart_number = NEW.cart_number ; 
-        END IF;
-    END IF;
-END //
-DELIMITER ;
-
-
-DELIMITER //
-CREATE TRIGGER disable_carts_for_expired_vip_membership
-AFTER DELETE ON vip_client
-FOR EACH ROW
-BEGIN
-    UPDATE shopping_cart SET cart_status ='blocked' WHERE OLD.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
-END //
-DELIMITER ;
-
-DELIMITER //
-CREATE TRIGGER charge_wallet
-AFTER INSERT ON deposits_into_wallet
-FOR EACH ROW
-BEGIN
-    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
-
-    SELECT t.transaction_status INTO trans_status
-    FROM transaction t
-    WHERE NEW.tracking_code = t.tracking_code;
-
-    IF trans_status = 'Successful' THEN
-        UPDATE client SET wallet_balance = wallet_balance + NEW.amount WHERE NEW.id = client.id;
-    END IF;
-END //
-DELIMITER ;
-
-CREATE FUNCTION subscription_amount ()
-    RETURNS INTEGER DETERMINISTIC
-    RETURN 20000;
-DELIMITER //
-CREATE TRIGGER transaction_for_subscription
-AFTER INSERT ON subscribe
-FOR EACH ROW
-BEGIN
-    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
-    DECLARE  trans_timestamp TIMESTAMP;
-    SELECT t.transaction_status,t.transaction_timestamp INTO trans_status,trans_timestamp
-    FROM transaction AS t WHERE NEW.tracking_code = t.tracking_code;
-
-    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
-        UPDATE client SET wallet_balance = wallet_balance - subscription_amount() WHERE NEW.id = client.id;
-        INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
-    ELSE
-        IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM bank_transaction)) THEN
-            INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
-        END IF;
-    END IF;
-END //
-DELIMITER ;
-
-
-DELIMITER //
-CREATE TRIGGER transaction_for_shopping
-AFTER INSERT ON issued_for
-FOR EACH ROW
-BEGIN
-    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
-    DECLARE shopping_cart_price BIGINT;
-
-    SELECT t.transaction_status INTO trans_status FROM transaction t WHERE NEW.tracking_code = t.tracking_code;
-    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE NEW.id = id AND NEW.cart_number = cart_number AND NEW.locked_number = locked_number;
-    
-    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
-        UPDATE client SET wallet_balance = wallet_balance - shopping_cart_price WHERE NEW.id = client.id;
-    END IF;
-END //
-DELIMITER ;
--- ##############################  EVENTS ##############################
-DELIMITER //
     CREATE PROCEDURE restore_products_from_blocked_cart(user_id INTEGER,shopping_cart_number INTEGER,locked_cart_number INTEGER)
     BEGIN
         DECLARE product_quantity INTEGER;
@@ -715,6 +421,274 @@ DELIMITER //
         UPDATE shopping_cart SET cart_status = 'blocked' WHERE id = user_id AND cart_number = shopping_cart_number;
     END//
 DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE activate_cart(user_id INTEGER,shopping_cart_number INTEGER)
+BEGIN
+    UPDATE shopping_cart SET cart_status = 'active' WHERE id = user_id AND cart_number = shopping_cart_number;
+END// DELIMITER ;
+
+-- ##############################  TRIGGERS ##############################
+
+DELIMITER // 
+CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW BEGIN DECLARE 
+            
+        shopping_cart_status ENUM ('active', 'blocked', 'locked');
+        SELECT
+            cart_status INTO shopping_cart_status
+        FROM
+            shopping_cart
+        WHERE
+            id = NEW.id
+            AND cart_number = NEW.cart_number;
+
+        IF (shopping_cart_status = 'blocked') THEN 
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The cart is blocked';
+END IF;
+END // DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER issue_discount_code_from_referral AFTER INSERT ON refer FOR EACH ROW 
+BEGIN
+        DROP TEMPORARY TABLE IF EXISTS referral_hierarchy_temp;
+        CREATE TEMPORARY TABLE referral_hierarchy_temp AS
+        (WITH RECURSIVE referral_hierarchy(referrer,referee) AS 
+        (
+            SELECT referrer,referee FROM refer
+            WHERE NEW.referee = referee
+            UNION
+            SELECT r.referrer,r.referee
+            FROM refer AS r,referral_hierarchy AS rh
+            WHERE rh.referrer = r.referee
+        )
+        SELECT * FROM referral_hierarchy);
+        CALL loop_through_refer_list();
+END//
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_cart_number_range_and_count BEFORE INSERT ON shopping_cart FOR EACH ROW
+BEGIN
+    DECLARE is_vip TINYINT;
+
+    IF NEW.id IN (SELECT id FROM vip_client WHERE TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),subscription_expiration_time) >= 0) THEN
+        SET is_vip = TRUE;
+    ELSE
+        SET is_vip = FALSE;
+    END IF;
+
+    IF is_vip = TRUE THEN
+        IF (NEW.cart_number < 2 OR NEW.cart_number > 5) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The vip users can not have more than 5 shopping cart';
+        END IF;
+    ELSE
+        IF (EXISTS (SELECT * FROM shopping_cart WHERE NEW.id = id)) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Normal users can not have more than 1 shopping cart';
+        ELSE
+            IF (NEW.cart_number != 1) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The cart number can be 1 for normal clients';
+            END IF;
+        END IF;
+    END IF;
+
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER actions_after_adding_client AFTER INSERT ON client FOR EACH ROW
+BEGIN
+    INSERT INTO shopping_cart VALUES (NEW.id,1,'active');
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER actions_after_adding_vip_client AFTER INSERT ON vip_client FOR EACH ROW
+BEGIN
+    IF (NOT EXISTS (SELECT * FROM shopping_cart WHERE NEW.id = id AND cart_number >= 2)) THEN
+        INSERT INTO shopping_cart VALUES (NEW.id,2,'active'),(NEW.id,3,'active'),(NEW.id,4,'active'),(NEW.id,5,'active');
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_existence_of_product BEFORE INSERT ON added_to FOR EACH ROW
+BEGIN
+    DECLARE total INTEGER;
+    SELECT stock_count INTO total
+    FROM product p
+    WHERE p.id = NEW.product_id;
+    IF total = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'The product is non existent.'
+    ELSE
+        IF total < NEW.quantity THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock.';
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER reduce_stock_number AFTER INSERT ON added_to FOR EACH ROW
+BEGIN
+    UPDATE product p
+    SET stock_count = stock_count - NEW.quantity
+    WHERE p.id = NEW.product_id;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_phone_number_structure BEFORE INSERT ON client FOR EACH ROW
+BEGIN
+    IF NOT (NEW.phone_number REGEXP '^[0-9]+$') THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A phone number should only contains digits';
+    END IF;
+    IF LENGTH(NEW.phone_number) != 11 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A phone number should contains 11 digits';
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_discount_usage_count BEFORE INSERT ON applied_to FOR EACH ROW
+BEGIN
+    DECLARE number_of_usage INTEGER;
+    DECLARE usage_limit INTEGER;
+    
+    SELECT COUNT(*) INTO number_of_usage
+    FROM applied_to apt
+    WHERE apt.id = NEW.id AND apt.code = NEW.code;
+
+    SELECT usage_count INTO usage_limit
+    FROM discount_code as dc , public_code as pc , private_code
+    WHERE (NEW.code = pc.code OR (NEW.code = private_code.code AND NEW.id = private_code.id));
+
+    IF (number_of_usage + 1) > usage_limit THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Usage limit has been exceeded'
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_using_expired_discount_code BEFORE INSERT ON applied_to FOR EACH ROW
+BEGIN
+    DECLARE exp_date TIMESTAMP;
+
+    SELECT expiration_date INTO exp_date
+    FROM discount_code dc
+    WHERE dc.code = NEW.code;
+
+    IF exp_date < NOW() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'This code is expired';
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_user_for_using_private_code BEFORE INSERT ON applied_to FOR EACH ROW
+BEGIN
+    DECLARE is_private TINYINT;
+
+    IF EXISTS(SELECT * FROM private_code pc WHERE pc.code = NEW.code and  pc.id != NEW.id) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'This code does not belong to you'
+    END IF;
+END //
+DELIMITER ;
+
+-- check transaction for insert into issued for
+
+DELIMITER //
+CREATE TRIGGER free_shopping_cart AFTER INSERT ON issued_for FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+
+    SELECT t.transaction_status INTO trans_status
+    FROM transaction t
+    WHERE NEW.tracking_code = t.tracking_code;
+
+    IF trans_status = 'Successful' THEN
+        IF ((NEW.id NOT IN (SELECT id FROM vip_client WHERE TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),subscription_expiration_time) >= 0)) AND NEW.cart_number >= 2) THEN
+            UPDATE shopping_cart SET cart_status ='blocked' WHERE NEW.id = shopping_cart.id AND shopping_cart.cart_number = NEW.cart_number;
+        ELSE
+            UPDATE shopping_cart SET cart_status = 'active' WHERE shopping_cart.id= NEW.id AND shopping_cart.cart_number = NEW.cart_number ; 
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER charge_wallet AFTER INSERT ON deposits_into_wallet FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+
+    SELECT t.transaction_status INTO trans_status
+    FROM transaction t
+    WHERE NEW.tracking_code = t.tracking_code;
+
+    IF trans_status = 'Successful' THEN
+        UPDATE client SET wallet_balance = wallet_balance + NEW.amount WHERE NEW.id = client.id;
+    END IF;
+END //
+DELIMITER ;
+
+CREATE FUNCTION subscription_amount () RETURNS INTEGER DETERMINISTIC RETURN 20000;
+
+
+DELIMITER //
+CREATE TRIGGER transaction_for_subscription AFTER INSERT ON subscribe FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+    DECLARE  trans_timestamp TIMESTAMP;
+    SELECT t.transaction_status,t.transaction_timestamp INTO trans_status,trans_timestamp
+    FROM transaction AS t WHERE NEW.tracking_code = t.tracking_code;
+
+    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
+        UPDATE client SET wallet_balance = wallet_balance - subscription_amount() WHERE NEW.id = client.id;
+        IF (NOT EXISTS(SELECT id FROM vip_client WHERE NEW.id = id))THEN
+            INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
+        ELSE
+            UPDATE vip_client SET subscription_expiration_time = trans_timestamp + INTERVAL 30 DAY WHERE id = NEW.id;
+            UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
+        END IF;
+    ELSE
+        IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM bank_transaction)) THEN
+            IF (NOT EXISTS(SELECT id FROM vip_client WHERE NEW.id = id))THEN
+                INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
+            ELSE
+                UPDATE vip_client SET subscription_expiration_time = trans_timestamp + INTERVAL 30 DAY WHERE id = NEW.id;
+                UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
+            END IF;
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER transaction_for_shopping AFTER INSERT ON issued_for FOR EACH ROW
+BEGIN
+    DECLARE  trans_status enum ('Successful', 'Unsuccessful', 'Semi successful');
+    DECLARE shopping_cart_price BIGINT;
+
+    SELECT t.transaction_status INTO trans_status FROM transaction t WHERE NEW.tracking_code = t.tracking_code;
+    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE NEW.id = id AND NEW.cart_number = cart_number AND NEW.locked_number = locked_number;
+    
+    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
+        UPDATE client SET wallet_balance = wallet_balance - shopping_cart_price WHERE NEW.id = client.id;
+    END IF;
+END //
+DELIMITER ;
+-- ##############################  EVENTS ##############################
 
 -- locked number have to be auto increment
 DELIMITER //
@@ -753,13 +727,6 @@ DO
 DELIMITER ;
 
 DELIMITER //
-CREATE PROCEDURE activate_cart(user_id INTEGER,shopping_cart_number INTEGER)
-BEGIN
-    UPDATE shopping_cart SET cart_status = 'active' WHERE id = user_id AND cart_number = shopping_cart_number;
-END// DELIMITER ;
-
-
-DELIMITER //
 CREATE EVENT check_blocked_cart_for_activating
 ON SCHEDULE EVERY 1 HOUR 
 STARTS CURRENT_TIMESTAMP + INTERVAL 7 DAY
@@ -767,7 +734,6 @@ ON COMPLETION PRESERVE
 DO 
     BEGIN
         DECLARE done TINYINT DEFAULT FALSE;
-        DECLARE is_vip TINYINT DEFAULT FALSE;
         DECLARE user_id INTEGER;
         DECLARE shopping_cart_number INTEGER;
         DECLARE locked_cart_number INTEGER;
@@ -787,7 +753,7 @@ DO
                     SELECT MAX(locked_timestamp) INTO newest_cart_timestamp FROM locked_shopping_cart WHERE id= user_id AND cart_number = shopping_cart_number GROUP BY id,cart_number;
                     IF ((lock_timestamp = newest_cart_timestamp) AND TIMESTAMPDIFF(DAY,lock_timestamp,CURRENT_TIMESTAMP()) >= 7) THEN
                         
-                        IF user_id IN (SELECT id FROM vip_client) THEN
+                        IF user_id IN (SELECT id FROM vip_client WHERE TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),subscription_expiration_time) >= 0) THEN
                             CALL activate_cart(user_id,shopping_cart_number);
                         ELSE
                             IF(shopping_cart_number = 1) THEN
@@ -795,19 +761,35 @@ DO
                             END IF;
                         END IF;
                     END IF;
-                    
                 END IF;
             END LOOP;
         CLOSE blocked_cart_list;
     END //
 
 DELIMITER //
-CREATE EVENT expire_vip_user
-ON SCHEDULE EVERY 1 MINUTE
+CREATE EVENT check_expiration_vip_subscription
+ON SCHEDULE EVERY 1 MINUTE 
+STARTS CURRENT_TIMESTAMP + INTERVAL 1 MINUTE
+ON COMPLETION PRESERVE
 DO
 BEGIN
-    -- CHECK IF EXPIRE 
-    DELETE FROM PEYSAZ.VIP_CLIENTS
-    WHERE DATE_FORMAT(subscription_expiration_time, '%Y-%m-%d %H:%i:00') <= DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:00');
+    
+    DECLARE done TINYINT DEFAULT FALSE;
+    DECLARE user_id INTEGER;
+
+    DECLARE expired_vip_list CURSOR FOR  
+    SELECT vc.id FROM vip_client AS vc WHERE TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),subscription_expiration_time) < 0;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN expired_vip_list;
+        loop_through:
+        LOOP
+            FETCH NEXT FROM expired_vip_list INTO user_id;
+            IF done THEN LEAVE loop_through;
+            ELSE
+                UPDATE shopping_cart SET cart_status ='blocked' WHERE user_id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
+            END IF;
+        END LOOP;
+    CLOSE expired_vip_list;
 END //
 DELIMITER ;
