@@ -7,7 +7,7 @@ USE pcsaz;
 
 create table
     product (
-        id AUTO_INCREMENT primary key,
+        id INTEGER primary key AUTO_INCREMENT,
         category enum (
             'Motherboard',
             'CPU',
