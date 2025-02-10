@@ -357,10 +357,14 @@ DELIMITER //
     BEGIN
         DECLARE last_code INTEGER;
         DECLARE dis_amount DECIMAL;
-        IF ROUND (50 / (ref_level * 2),3) < 1 THEN
-        Set dis_amount = 50000;
+        IF (ref_level = 0) THEN
+            SET dis_amount = 50.000;
         ELSE
-        SET dis_amount = ROUND(50 / (ref_level * 2),3);
+            IF ROUND (50 / (ref_level * 2),3) < 1 THEN
+            Set dis_amount = 50000;
+            ELSE
+            SET dis_amount = ROUND(50 / (ref_level * 2),3);
+            END IF;
         END IF;
         INSERT INTO discount_code(amount,discount_limit,usage_count,expiration_date) VALUES (dis_amount,1000000,1,DATE_ADD(CURRENT_TIMESTAMP,INTERVAL 7 DAY));
         SET last_code = LAST_INSERT_ID();
@@ -489,9 +493,9 @@ END// DELIMITER ;
 -- ##############################  TRIGGERS ##############################
 
 DELIMITER // 
-CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW BEGIN DECLARE 
-            
-        shopping_cart_status ENUM ('active', 'blocked', 'locked');
+CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW 
+BEGIN
+        DECLARE shopping_cart_status ENUM ('active', 'blocked', 'locked');
         SELECT
             cart_status INTO shopping_cart_status
         FROM
@@ -544,6 +548,7 @@ BEGIN
             WHERE rh.referrer = r.referee
         )
         SELECT * FROM referral_hierarchy);
+        CALL issue_private_discount_code(NEW.referee,0);
         CALL loop_through_refer_list();
 END//
 DELIMITER ;
