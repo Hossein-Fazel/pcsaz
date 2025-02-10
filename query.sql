@@ -920,7 +920,7 @@ BEGIN
             SELECT tracking_code 
             FROM transaction
             WHERE transaction_status = 'Successful'
-            AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH);
+            AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
           );
     
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET vip_done = 1;
