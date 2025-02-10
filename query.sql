@@ -442,7 +442,7 @@ BEGIN
     SELECT code FROM applied_to AS apt 
     WHERE user_id = apt.id AND shopping_cart_number = apt.cart_number AND locked_cart_number = apt.locked_number ORDER BY apt.applied_timestamp;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE user_id = id AND shopping_cart_number = cart_number AND locked_cart_number = locked_number;
+    SELECT SUM(cart_price * quantity) INTO shopping_cart_price FROM added_to WHERE user_id = id AND shopping_cart_number = cart_number AND locked_cart_number = locked_number;
     SET cart_price_after_applying_code = shopping_cart_price;
     OPEN code_list;
         loop_through:
@@ -571,11 +571,52 @@ BEGIN
     WHERE p.id = NEW.product_id;
     IF total = 0 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'The product is non existent.'
+        SET MESSAGE_TEXT = 'The product is non existent.';
     ELSE
         IF total < NEW.quantity THEN
             SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock.';
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER check_existence_of_product_on_update BEFORE UPDATE ON added_to FOR EACH ROW
+BEGIN
+    DECLARE total INTEGER;
+    DECLARE diff_product_quantity INTEGER;
+    SELECT stock_count INTO total
+    FROM product p
+    WHERE p.id = NEW.product_id;
+    SET diff_product_quantity = NEW.quantity - OLD.quantity;
+    IF (diff_product_quantity > 0) THEN    
+        IF (total = 0) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The product is non existent.';
+        ELSE
+            IF total < diff_product_quantity THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Your selected quantity of this product is more than the stock.';
+            END IF;
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+DELIMITER //
+CREATE TRIGGER add_diff_product_to_stock_on_update AFTER UPDATE ON added_to FOR EACH ROW
+BEGIN
+    DECLARE total INTEGER;
+    DECLARE diff_product_quantity INTEGER;
+    SELECT stock_count INTO total
+    FROM product p
+    WHERE p.id = NEW.product_id;
+    SET diff_product_quantity = NEW.quantity - OLD.quantity;
+    IF (diff_product_quantity > 0) THEN
+        UPDATE product SET stock_count = stock_count - diff_product_quantity WHERE id = NEW.product_id;
+    ELSE
+        IF (diff_product_quantity < 0) THEN
+            UPDATE product SET stock_count = stock_count + ABS(diff_product_quantity) WHERE id = NEW.product_id;
         END IF;
     END IF;
 END //
