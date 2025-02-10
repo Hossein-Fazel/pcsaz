@@ -440,10 +440,16 @@ BEGIN
 
     DECLARE code_list CURSOR FOR  
     SELECT code FROM applied_to AS apt 
-    WHERE user_id = apt.id AND shopping_cart_number = apt.cart_number AND locked_cart_number = apt.locked_number ORDER BY apt.applied_timestamp;
+    WHERE user_id = apt.id AND shopping_cart_number = apt.cart_number AND locked_cart_number = apt.locked_number
+    ORDER BY apt.applied_timestamp;
+    
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-    SELECT SUM(cart_price) INTO shopping_cart_price FROM added_to WHERE user_id = id AND shopping_cart_number = cart_number AND locked_cart_number = locked_number;
+    SELECT SUM(cart_price) INTO shopping_cart_price
+    FROM added_to 
+    WHERE user_id = id AND shopping_cart_number = cart_number AND locked_cart_number = locked_number;
+    
     SET cart_price_after_applying_code = shopping_cart_price;
+    
     OPEN code_list;
         loop_through:
         LOOP
@@ -453,7 +459,8 @@ BEGIN
                 SELECT dc.amount,dc.discount_limit INTO discount_code_amount,discount_code_limit FROM discount_code AS dc WHERE dis_code = dc.code;
                 IF (discount_code_amount <= 100) THEN
                     IF (ROUND((cart_price_after_applying_code * discount_code_amount) / 100 ,0) > discount_code_limit ) THEN
-                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount is greater than code''s limit';
+                        -- SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount is greater than code''s limit';
+                        SET cart_price_after_applying_code = cart_price_after_applying_code - discount_code_limit;
                     ELSE
                         SET cart_price_after_applying_code = cart_price_after_applying_code - (ROUND((cart_price_after_applying_code * discount_code_amount) / 100 ,0));
                     END IF;
@@ -463,8 +470,12 @@ BEGIN
             END IF;
         END LOOP;
     CLOSE code_list;  
-            
-    SET result = cart_price_after_applying_code;
+
+    IF cart_price_after_applying_code < 0 THEN
+        SET result = 0;
+    ELSE
+        SET result = cart_price_after_applying_code;
+    END IF;
 END// DELIMITER ;
 
 -- ##############################  TRIGGERS ##############################
