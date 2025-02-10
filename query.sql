@@ -708,24 +708,6 @@ BEGIN
 END //
 DELIMITER ;
 
-
-DELIMITER //
-CREATE TRIGGER check_discount_code_limit BEFORE INSERT ON applied_to FOR EACH ROW
-BEGIN
-    DECLARE shopping_cart_price BIGINT;
-    DECLARE discount_code_amount DECIMAL;
-    DECLARE discount_code_limit INTEGER;
-
-    CALL calculate_cart_price(NEW.id,NEW.cart_number,NEW.locked_number,shopping_cart_price); 
-    SELECT amount,discount_limit INTO discount_code_amount,discount_code_limit FROM discount_code dc WHERE dc.code = NEW.code;
-    IF (discount_code_amount <= 100) THEN
-        IF (ROUND((shopping_cart_price * discount_code_amount) / 100 ,0) > discount_code_limit ) THEN
-            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount is greater than code''s limit';
-        END IF;
-    END IF;
-END //
-DELIMITER ;
-
 -- check transaction for insert into issued for
 
 DELIMITER //
