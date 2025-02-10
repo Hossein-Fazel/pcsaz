@@ -509,7 +509,7 @@ BEGIN
 
         IF (shopping_cart_status = 'blocked') THEN 
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The cart is blocked';
-END IF;
+        END IF;
 END //
 DELIMITER ;
 
@@ -1002,3 +1002,21 @@ BEGIN
     CLOSE vip_cur;
 END//
 DELIMITER ;
+
+-- ##############################  ViEWS ##############################
+
+CREATE VIEW product_availability AS (
+    SELECT id,stock_count FROM product
+);
+
+CREATE VIEW product_price_history AS (
+
+    SELECT adt.product_id,adt.cart_price AS price,t.transaction_timestamp AS date_time FROM transaction AS t, issued_for AS isu, locked_shopping_cart AS lsc , added_to AS adt 
+    WHERE isu.id = lsc.id AND isu.cart_number = lsc.cart_number AND isu.locked_number = lsc.locked_number AND isu.tracking_code = t.tracking_code AND t.transaction_status = 'Successful' AND lsc.id = adt.id AND lsc.cart_number = adt.cart_number AND lsc.locked_number = adt.locked_number
+);
+
+CREATE VIEW client_purchase_history AS (
+
+    SELECT c.id,adt.product_id,adt.cart_price AS price,adt.quantity,t.transaction_timestamp AS date_time FROM transaction AS t, issued_for AS isu, client AS c,locked_shopping_cart AS lsc , added_to AS adt
+    WHERE isu.id = c.id AND isu.tracking_code = t.tracking_code AND t.transaction_status = 'Successful' AND isu.id = lsc.id AND isu.cart_number = lsc.cart_number AND isu.locked_number = lsc.locked_number AND lsc.id = adt.id AND lsc.cart_number = adt.cart_number AND lsc.locked_number = adt.locked_number
+);
