@@ -456,7 +456,6 @@ BEGIN
                 SELECT dc.amount,dc.discount_limit INTO discount_code_amount,discount_code_limit FROM discount_code AS dc WHERE dis_code = dc.code;
                 IF (discount_code_amount <= 100) THEN
                     IF (ROUND((cart_price_after_applying_code * discount_code_amount) / 100 ,0) > discount_code_limit ) THEN
-                        -- SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount is greater than code''s limit';
                         SET cart_price_after_applying_code = cart_price_after_applying_code - discount_code_limit;
                     ELSE
                         SET cart_price_after_applying_code = cart_price_after_applying_code - (ROUND((cart_price_after_applying_code * discount_code_amount) / 100 ,0));
@@ -902,40 +901,60 @@ ON SCHEDULE EVERY 1 MONTH
 DO
 BEGIN
     DECLARE user_id INTEGER;
-    DECLARE total_purchase DECIMAL(10,2);
-    DECLARE done INT DEFAULT 0;
-    DECLARE cur CURSOR FOR 
-        SELECT id 
+    DECLARE total_purchase DECIMAL(10,2) DEFAULT 0;
+    DECLARE spent_for_cart DECIMAL(10,2) DEFAULT 0;
+    DECLARE cnumber     INT;
+    DECLARE clnumber   INT;
+    DECLARE vip_done INT DEFAULT 0;
+    DECLARE numbers_done INT DEFAULT 0;
+    
+    DECLARE vip_cur CURSOR FOR 
+        SELECT id
         FROM vip_client 
         WHERE Subscription_expiration_time >= CURRENT_TIMESTAMP;
 
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-    OPEN cur;
-
-    calc_loop:
-    LOOP
-        FETCH cur INTO user_id;
-        IF done THEN
-            LEAVE calc_loop;
-        END IF;
-
-        SELECT SUM(adt.cart_price * 0.15) 
-        INTO total_purchase
-        FROM issued_for isu
-        JOIN locked_shopping_cart locked_cart ON isu.id = locked_cart.id AND isu.cart_number = locked_cart.number
-        JOIN added_to adt ON locked_cart.id = adt.id AND locked_cart.cart_number = adt.cart_number AND locked_cart.locked_Number = adt.locked_number
-        WHERE isu.id = user_id AND i IN (
-              SELECT tracking_code 
-              FROM transaction
-              WHERE transaction_status = 'Successful' AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
+    DECLARE numbers_cur CURSOR FOR
+        SELECT cart_number, locked_number
+        FROM applied_to apt JOIN issued_for isu ON apt.id = isj.id AND apt.cart_number = isu.cart_number AND apt.locked_number = isu.locked_number
+        WHERE apt.id = user_id AND tracking_code IN (
+            SELECT tracking_code 
+            FROM transaction
+            WHERE transaction_status = 'Successful'
+            AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH);
           );
+    
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET vip_done = 1;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET numbers_done = 1;
+    OPEN vip_cur;
 
-        IF total_purchase IS NOT NULL THEN
-            UPDATE client
-            SET wallet_balance = wallet_balance + total_purchase
-            WHERE id = user_id;
+
+    vip_loop: LOOP
+        FETCH vip_cur INTO user_id;
+        IF done THEN
+            LEAVE vip_loop;
         END IF;
+        OPEN numbers_cur;
+
+        numbers_loop: LOOP
+            FETCH numbers_cur INTO cnumber, clnumber;
+            IF done2 THEN
+                LEAVE numbers_loop;
+            END IF;
+            SET spent_for_cart = 0;
+
+            CALL calculate_cart_price(vid, cnumber, clnumber, spent_for_cart);
+            SET total_purchase = total_purchase + spent_for_cart;
+        END LOOP;
+        
+        CLOSE numbers_cur;
+        SET numbers_done = FALSE;
+
+        UPDATE client
+        SET wallet_balance = wallet_balance + total_purchase
+        WHERE id = user_id;
+
+        SET total_purchase = 0;
     END LOOP;
-    CLOSE cur;
+    CLOSE vip_cur;
 END//
 DELIMITER ;
