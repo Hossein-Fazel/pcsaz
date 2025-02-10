@@ -27,20 +27,20 @@ create table product (
 
 create table hdd (
         id INTEGER primary key,
-        rotational_speed INTEGER not null,
-        wattage INTEGER not null,
+        rotational_speed DECIMAL not null,
+        wattage DECIMAL not null,
         capacity smallint not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table cp_case (
         id INTEGER primary key,
         number_of_fans smallint not null,
-        fan_size smallint not null,
-        wattage INTEGER not null,
+        fan_size DECIMAL not null,
+        wattage DECIMAL not null,
         ctype enum (
             'Desktop',
             'Full Tower',
@@ -67,49 +67,49 @@ create table cp_case (
             'Brown',
             'Orange'
             ) not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table power_supply (
         id INTEGER primary key,
-        supported_wattage INTEGER not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        supported_wattage DECIMAL not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table gpu (
         id INTEGER primary key,
-        clock_speed smallint not null,
-        ram_size smallint not null,
+        clock_speed DECIMAL not null,
+        ram_size DECIMAL not null,
         number_of_fans smallint not null,
-        wattage INTEGER not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        wattage DECIMAL not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table ssd (
         id INTEGER primary key,
-        wattage INTEGER not null,
+        wattage DECIMAL not null,
         capacity smallint not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table ram_stick (
         id INTEGER primary key,
-        frequency INTEGER not null,
+        frequency DECIMAL not null,
         generation smallint not null,
-        wattage INTEGER not null,
+        wattage DECIMAL not null,
         capacity smallint not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
@@ -118,18 +118,18 @@ create table motherboard (
         chipset VARCHAR(40) not null,
         num_of_memory_slots smallint not null,
         memory_speed_range smallint not null,
-        wattage INTEGER not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        wattage DECIMAL not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table cpu (
         id INTEGER primary key,
         maximum_addressable_memory_limit smallint not null,
-        boost_frequency smallint not null,
-        base_frequency smallint not null,
+        boost_frequency DECIMAL not null,
+        base_frequency DECIMAL not null,
         number_of_cores smallint not null,
         number_of_threads smallint not null,
         microarchitecture enum (
@@ -139,16 +139,16 @@ create table cpu (
             'Intel Broadwell',
             'Intel Kaby Lake'
         ) not null,
-        wattage INTEGER not null,
+        wattage DECIMAL not null,
         generation smallint not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
 create table cooler (
         id INTEGER primary key,
-        maximum_rotational_speed INTEGER not null,
-        wattage INTEGER not null,
-        fan_size smallint not null,
+        maximum_rotational_speed DECIMAL not null,
+        wattage DECIMAL not null,
+        fan_size DECIMAL not null,
         cooling_method enum (
             'Air',
             'Passive',
@@ -157,9 +157,9 @@ create table cooler (
             'Peltier',
             'Liquid'
         ) not null,
-        depth smallint not null,
-        height smallint not null,
-        width smallint not null,
+        depth DECIMAL not null,
+        height DECIMAL not null,
+        width DECIMAL not null,
         foreign key (id) references product (id) on delete cascade on update cascade
     );
 
@@ -216,7 +216,7 @@ create table client (
         phone_number CHAR(11) unique,
         first_name VARCHAR(50) not null,
         last_name VARCHAR(50) not null,
-        wallet_balance integer default 0,
+        wallet_balance INTEGER default 0,
         referral_code VARCHAR(20) not null unique,
         client_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP
     );
@@ -358,7 +358,7 @@ DELIMITER //
         DECLARE last_code INTEGER;
         DECLARE dis_amount DECIMAL;
         IF (ref_level = 0) THEN
-            SET dis_amount = 50.000;
+            SET dis_amount = 50;
         ELSE
             IF ROUND (50 / (ref_level * 2),3) < 1 THEN
             Set dis_amount = 50000;
@@ -745,8 +745,6 @@ BEGIN
 END //
 DELIMITER ;
 
--- check transaction for insert into issued for
-
 DELIMITER //
 CREATE TRIGGER free_shopping_cart AFTER INSERT ON issued_for FOR EACH ROW
 BEGIN
@@ -830,7 +828,6 @@ DELIMITER ;
 -- ##############################  EVENTS ##############################
 SET GLOBAL event_scheduler = ON;
 
--- locked number have to be auto increment
 DELIMITER //
 CREATE EVENT check_cart_payment
 ON SCHEDULE EVERY 1 HOUR 
@@ -945,8 +942,6 @@ BEGIN
     DECLARE spent_for_cart BIGINT DEFAULT 0;
     DECLARE cnumber INT;
     DECLARE clnumber INT;
-    -- DECLARE vip_done BOOLEAN DEFAULT FALSE;
-    -- DECLARE numbers_done BOOLEAN DEFAULT FALSE;
     DECLARE done BOOLEAN DEFAULT FALSE;
 
 
@@ -969,8 +964,6 @@ BEGIN
                 AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
           );
     
-    -- DECLARE CONTINUE HANDLER FOR NOT FOUND SET vip_done = TRUE;
-    -- DECLARE CONTINUE HANDLER FOR NOT FOUND SET numbers_done = TRUE;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
 
