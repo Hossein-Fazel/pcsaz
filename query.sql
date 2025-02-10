@@ -577,6 +577,9 @@ BEGIN
     SELECT stock_count INTO total
     FROM product p
     WHERE p.id = NEW.product_id;
+    IF NEW.quantity < 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Quantity can not be negative.';
+    END IF;
     IF total = 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'The product is non existent.';
@@ -597,6 +600,9 @@ BEGIN
     SELECT stock_count INTO total
     FROM product p
     WHERE p.id = NEW.product_id;
+    IF NEW.quantity < 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Quantity can not be negative.';
+    END IF;
     SET diff_product_quantity = NEW.quantity - OLD.quantity;
     IF (diff_product_quantity > 0) THEN    
         IF (total = 0) THEN
