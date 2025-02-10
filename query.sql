@@ -474,6 +474,18 @@ BEGIN
     END IF;
 END// DELIMITER ;
 
+DELIMITER //
+CREATE PROCEDURE create_id_for_locked_shopping_cart(user_id INTEGER,shopping_cart_number INTEGER,OUT created_id INTEGER)
+BEGIN
+    DECLARE last_locked_cart_number INTEGER DEFAULT 1;
+    IF EXISTS(SELECT * FROM locked_shopping_cart WHERE id = user_id AND shopping_cart_number = cart_number) THEN
+        SELECT MAX(locked_number) INTO last_locked_cart_number FROM locked_shopping_cart WHERE id = user_id AND shopping_cart_number = cart_number;
+        SET created_id = last_locked_cart_number + 1;
+    ELSE
+        SET created_id = 1;
+    END IF;
+END// DELIMITER ;
+
 -- ##############################  TRIGGERS ##############################
 
 DELIMITER // 
@@ -491,6 +503,20 @@ CREATE TRIGGER blocked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW B
         IF (shopping_cart_status = 'blocked') THEN 
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The cart is blocked';
 END IF;
+END // DELIMITER ;
+
+DELIMITER // 
+CREATE TRIGGER assign_number_for_locked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW 
+BEGIN  
+    CALL create_id_for_locked_shopping_cart(NEW.id,NEW.cart_number,NEW.locked_number);
+END // DELIMITER ;
+
+DELIMITER // 
+CREATE TRIGGER update_number_for_locked_cart BEFORE UPDATE ON locked_shopping_cart FOR EACH ROW 
+BEGIN  
+    IF (OLD.locked_number != NEW.locked_number) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Can not update locked shopping cart''s number';
+    END IF;
 END // DELIMITER ;
 
 DELIMITER // 
