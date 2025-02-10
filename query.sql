@@ -430,7 +430,8 @@ DELIMITER //
 CREATE PROCEDURE activate_cart(user_id INTEGER,shopping_cart_number INTEGER)
 BEGIN
     UPDATE shopping_cart SET cart_status = 'active' WHERE id = user_id AND cart_number = shopping_cart_number;
-END// DELIMITER ;
+END//
+DELIMITER ;
 
 DELIMITER //
 CREATE PROCEDURE calculate_cart_price (user_id INTEGER,shopping_cart_number INTEGER,locked_cart_number INTEGER,OUT result BIGINT)
@@ -476,7 +477,8 @@ BEGIN
     ELSE
         SET result = cart_price_after_applying_code;
     END IF;
-END// DELIMITER ;
+END//
+DELIMITER ;
 
 DELIMITER //
 CREATE PROCEDURE create_id_for_locked_shopping_cart(user_id INTEGER,shopping_cart_number INTEGER,OUT created_id INTEGER)
@@ -488,7 +490,8 @@ BEGIN
     ELSE
         SET created_id = 1;
     END IF;
-END// DELIMITER ;
+END//
+DELIMITER ;
 
 -- ##############################  TRIGGERS ##############################
 
@@ -507,13 +510,15 @@ BEGIN
         IF (shopping_cart_status = 'blocked') THEN 
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The cart is blocked';
 END IF;
-END // DELIMITER ;
+END //
+DELIMITER ;
 
 DELIMITER // 
 CREATE TRIGGER assign_number_for_locked_cart BEFORE INSERT ON locked_shopping_cart FOR EACH ROW 
 BEGIN  
     CALL create_id_for_locked_shopping_cart(NEW.id,NEW.cart_number,NEW.locked_number);
-END // DELIMITER ;
+END //
+DELIMITER ;
 
 DELIMITER // 
 CREATE TRIGGER update_number_for_locked_cart BEFORE UPDATE ON locked_shopping_cart FOR EACH ROW 
@@ -521,7 +526,8 @@ BEGIN
     IF (OLD.locked_number != NEW.locked_number) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Can not update locked shopping cart''s number';
     END IF;
-END // DELIMITER ;
+END //
+DELIMITER ;
 
 DELIMITER // 
 CREATE TRIGGER check_discount_code_limit_for_non_percentage_code BEFORE INSERT ON discount_code FOR EACH ROW
@@ -531,7 +537,8 @@ BEGIN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount amount must be equal to discount limit for non percentage codes';
         END IF;
     END IF;
-END // DELIMITER ;
+END //
+DELIMITER ;
 
 DELIMITER //
 CREATE TRIGGER issue_discount_code_from_referral AFTER INSERT ON refer FOR EACH ROW 
@@ -927,18 +934,22 @@ END //
 DELIMITER ;
 
 DELIMITER //
+
 CREATE EVENT monthly_add_to_vip_wallet
 ON SCHEDULE EVERY 1 MONTH
+STARTS CURRENT_TIMESTAMP
 DO
 BEGIN
     DECLARE user_id INTEGER;
-    DECLARE total_purchase DECIMAL(10,2) DEFAULT 0;
-    DECLARE spent_for_cart DECIMAL(10,2) DEFAULT 0;
-    DECLARE cnumber     INT;
-    DECLARE clnumber   INT;
-    DECLARE vip_done INT DEFAULT 0;
-    DECLARE numbers_done INT DEFAULT 0;
-    
+    DECLARE total_purchase BIGINT DEFAULT 0;
+    DECLARE spent_for_cart BIGINT DEFAULT 0;
+    DECLARE cnumber INT;
+    DECLARE clnumber INT;
+    -- DECLARE vip_done BOOLEAN DEFAULT FALSE;
+    -- DECLARE numbers_done BOOLEAN DEFAULT FALSE;
+    DECLARE done BOOLEAN DEFAULT FALSE;
+
+
     DECLARE vip_cur CURSOR FOR 
         SELECT id
         FROM vip_client 
@@ -946,39 +957,48 @@ BEGIN
 
     DECLARE numbers_cur CURSOR FOR
         SELECT cart_number, locked_number
-        FROM applied_to apt JOIN issued_for isu ON apt.id = isj.id AND apt.cart_number = isu.cart_number AND apt.locked_number = isu.locked_number
-        WHERE apt.id = user_id AND tracking_code IN (
-            SELECT tracking_code 
-            FROM transaction
-            WHERE transaction_status = 'Successful'
-            AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
+        FROM applied_to apt 
+        JOIN issued_for isu ON apt.id = isu.id 
+            AND apt.cart_number = isu.cart_number 
+            AND apt.locked_number = isu.locked_number
+        WHERE apt.id = user_id 
+          AND tracking_code IN (
+              SELECT tracking_code 
+              FROM transaction
+              WHERE transaction_status = 'Successful'
+                AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
           );
     
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET vip_done = 1;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET numbers_done = 1;
-    OPEN vip_cur;
+    -- DECLARE CONTINUE HANDLER FOR NOT FOUND SET vip_done = TRUE;
+    -- DECLARE CONTINUE HANDLER FOR NOT FOUND SET numbers_done = TRUE;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
+
+    OPEN vip_cur;
 
     vip_loop: LOOP
         FETCH vip_cur INTO user_id;
         IF done THEN
             LEAVE vip_loop;
         END IF;
+
         OPEN numbers_cur;
 
         numbers_loop: LOOP
             FETCH numbers_cur INTO cnumber, clnumber;
-            IF done2 THEN
+            IF done THEN
                 LEAVE numbers_loop;
             END IF;
-            SET spent_for_cart = 0;
 
-            CALL calculate_cart_price(vid, cnumber, clnumber, spent_for_cart);
+            SET spent_for_cart = 0;
+            CALL calculate_cart_price(user_id, cnumber, clnumber, spent_for_cart);
+
             SET total_purchase = total_purchase + spent_for_cart;
         END LOOP;
-        
+
         CLOSE numbers_cur;
-        SET numbers_done = FALSE;
+
+        SET done = FALSE;
 
         UPDATE client
         SET wallet_balance = wallet_balance + total_purchase
