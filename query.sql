@@ -493,6 +493,36 @@ BEGIN
 END//
 DELIMITER ;
 
+DELIMITER //
+CREATE PROCEDURE calculate_price_of_all_carts (user_id INTEGER,OUT result BIGINT)
+BEGIN
+    DECLARE shopping_cart_price BIGINT;
+    DECLARE total_price BIGINT DEFAULT 0;
+    DECLARE c_number INTEGER;
+    DECLARE l_number INTEGER;
+    DECLARE last_month TIMESTAMP DEFAULT DATE_FORMAT(TIMESTAMPADD(MONTH,-1,CURRENT_TIMESTAMP),'%Y-%m-01 00:00:00');
+    DECLARE this_month TIMESTAMP DEFAULT DATE_FORMAT(CURRENT_TIMESTAMP,'%Y-%m-01 00:00:00');
+    DECLARE done TINYINT DEFAULT FALSE;
+
+    DECLARE cart_list CURSOR FOR  
+    SELECT isu.cart_number,isu.locked_number FROM issued_for AS isu , transaction AS t , locked_shopping_cart AS lsc
+    WHERE user_id = lsc.id AND lsc.cart_number = isu.cart_number AND lsc.locked_number = isu.locked_number AND lsc.id = isu.id AND isu.tracking_code = t.tracking_code AND t.transaction_status = 'Successful' AND t.transaction_timestamp >= last_month AND t.transaction_timestamp < this_month;
+    
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    OPEN cart_list;
+        loop_through:
+        LOOP
+            FETCH NEXT FROM cart_list INTO c_number,l_number;
+            IF done THEN LEAVE loop_through;
+            ELSE
+                CALL calculate_cart_price(user_id,c_number,l_number,shopping_cart_price);
+                SET total_price = total_price + shopping_cart_price;
+            END IF;
+        END LOOP;
+    CLOSE cart_list;  
+    SET result = total_price;
+END//
+DELIMITER ;
 -- ##############################  TRIGGERS ##############################
 
 DELIMITER // 
@@ -931,75 +961,30 @@ END //
 DELIMITER ;
 
 DELIMITER //
-
-CREATE EVENT monthly_add_to_vip_wallet
+CREATE EVENT monthly_add_15_percentage_to_vip_wallet
 ON SCHEDULE EVERY 1 MONTH
-STARTS CURRENT_TIMESTAMP
+STARTS DATE_FORMAT(TIMESTAMPADD(MONTH,1,CURRENT_TIMESTAMP),'%Y-%m-01 00:00:00')
+ON COMPLETION PRESERVE
 DO
 BEGIN
     DECLARE user_id INTEGER;
-    DECLARE total_purchase BIGINT DEFAULT 0;
-    DECLARE spent_for_cart BIGINT DEFAULT 0;
-    DECLARE cnumber INT;
-    DECLARE clnumber INT;
-    DECLARE done BOOLEAN DEFAULT FALSE;
+    DECLARE total_purchase DECIMAL;
+    DECLARE done TINYINT DEFAULT FALSE;
 
-
-    DECLARE vip_cur CURSOR FOR 
-        SELECT id
-        FROM vip_client 
-        WHERE Subscription_expiration_time >= CURRENT_TIMESTAMP;
-
-    DECLARE numbers_cur CURSOR FOR
-        SELECT cart_number, locked_number
-        FROM applied_to apt 
-        JOIN issued_for isu ON apt.id = isu.id 
-            AND apt.cart_number = isu.cart_number 
-            AND apt.locked_number = isu.locked_number
-        WHERE apt.id = user_id 
-          AND tracking_code IN (
-              SELECT tracking_code 
-              FROM transaction
-              WHERE transaction_status = 'Successful'
-                AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
-          );
+    DECLARE vip_list CURSOR FOR SELECT id FROM vip_client WHERE Subscription_expiration_time >= CURRENT_TIMESTAMP;
     
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-
-
-    OPEN vip_cur;
-
-    vip_loop: LOOP
-        FETCH vip_cur INTO user_id;
-        IF done THEN
-            LEAVE vip_loop;
-        END IF;
-
-        OPEN numbers_cur;
-
-        numbers_loop: LOOP
-            FETCH numbers_cur INTO cnumber, clnumber;
-            IF done THEN
-                LEAVE numbers_loop;
+    OPEN vip_list;
+    loop_through: 
+        LOOP
+            FETCH vip_list INTO user_id;
+            IF done THEN LEAVE loop_through;
+            ELSE
+                CALL calculate_price_of_all_carts(user_id,total_purchase);
+                UPDATE client SET wallet_balance = wallet_balance + ROUND((total_purchase * 0.15),0) WHERE id = user_id; 
             END IF;
-
-            SET spent_for_cart = 0;
-            CALL calculate_cart_price(user_id, cnumber, clnumber, spent_for_cart);
-
-            SET total_purchase = total_purchase + spent_for_cart;
         END LOOP;
-
-        CLOSE numbers_cur;
-
-        SET done = FALSE;
-
-        UPDATE client
-        SET wallet_balance = wallet_balance + total_purchase
-        WHERE id = user_id;
-
-        SET total_purchase = 0;
-    END LOOP;
-    CLOSE vip_cur;
+    CLOSE vip_list;
 END//
 DELIMITER ;
 
