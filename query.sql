@@ -954,7 +954,7 @@ BEGIN
               SELECT tns.tracking_code 
               FROM transaction tns
               WHERE transaction_status = 'Successful'
-                AND transaction_timestamp >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)
+                AND transaction_timestamp >= DATE_FORMAT(TIMESTAMPADD(MONTH,-1,CURRENT_TIMESTAMP),'%Y-%m-01 00:00:00')
           );
 
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
