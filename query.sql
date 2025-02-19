@@ -792,22 +792,16 @@ BEGIN
     SELECT t.transaction_status,t.transaction_timestamp INTO trans_status,trans_timestamp
     FROM transaction AS t WHERE NEW.tracking_code = t.tracking_code;
 
-    IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction)) THEN
-        UPDATE client SET wallet_balance = wallet_balance - subscription_amount() WHERE NEW.id = client.id;
+    IF (trans_status = 'Successful') THEN
+        IF  NEW.tracking_code IN (SELECT tracking_code FROM wallet_transaction) THEN
+            UPDATE client SET wallet_balance = wallet_balance - subscription_amount() WHERE NEW.id = client.id;
+        END IF;
+
         IF (NOT EXISTS(SELECT id FROM vip_client WHERE NEW.id = id))THEN
             INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
         ELSE
             UPDATE vip_client SET subscription_expiration_time = trans_timestamp + INTERVAL 30 DAY WHERE id = NEW.id;
-            UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
-        END IF;
-    ELSE
-        IF (trans_status = 'Successful' AND NEW.tracking_code IN (SELECT tracking_code FROM bank_transaction)) THEN
-            IF (NOT EXISTS(SELECT id FROM vip_client WHERE NEW.id = id))THEN
-                INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
-            ELSE
-                UPDATE vip_client SET subscription_expiration_time = trans_timestamp + INTERVAL 30 DAY WHERE id = NEW.id;
-                UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
-            END IF;
+            UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'blocked';
         END IF;
     END IF;
 END //
