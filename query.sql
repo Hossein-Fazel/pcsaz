@@ -801,7 +801,7 @@ BEGIN
             INSERT INTO vip_client VALUES (NEW.id,trans_timestamp + INTERVAL 30 DAY);
         ELSE
             UPDATE vip_client SET subscription_expiration_time = trans_timestamp + INTERVAL 30 DAY WHERE id = NEW.id;
-            UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'blocked';
+            UPDATE shopping_cart SET cart_status ='active' WHERE NEW.id = shopping_cart.id AND (shopping_cart.cart_number >=2 AND shopping_cart.cart_number<=5) AND shopping_cart.cart_status != 'locked';
         END IF;
     END IF;
 END //
