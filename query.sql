@@ -507,8 +507,8 @@ BEGIN
             id = NEW.id
             AND cart_number = NEW.cart_number;
 
-        IF (shopping_cart_status = 'blocked') THEN 
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The cart is blocked';
+        IF (shopping_cart_status = 'blocked' OR shopping_cart_status = 'locked') THEN 
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This cart can not be locked';
         END IF;
 END //
 DELIMITER ;
