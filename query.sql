@@ -218,7 +218,8 @@ create table client (
         last_name VARCHAR(50) not null,
         wallet_balance INTEGER default 0,
         referral_code VARCHAR(20) not null unique,
-        client_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP
+        client_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP,
+        password VARCHAR(64) not null
     );
 create table vip_client (
         id INTEGER primary key,
