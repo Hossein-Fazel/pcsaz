@@ -708,8 +708,8 @@ BEGIN
     WHERE apt.id = NEW.id AND apt.code = NEW.code;
 
     SELECT usage_count INTO usage_limit
-    FROM discount_code as dc , public_code as pc , private_code
-    WHERE (NEW.code = pc.code OR (NEW.code = private_code.code AND NEW.id = private_code.id));
+    FROM discount_code
+    WHERE (NEW.code = code);
 
     IF (number_of_usage + 1) > usage_limit THEN
         SIGNAL SQLSTATE '45000'
