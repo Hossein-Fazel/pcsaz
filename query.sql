@@ -252,7 +252,7 @@ create table discount_code (
 
 create table private_code (
         code INTEGER,
-        id INTEGER,
+        id INTEGER not null,
         private_code_timestamp TIMESTAMP not null default CURRENT_TIMESTAMP,
         primary key (code),
         foreign key (code) references discount_code (code) on delete cascade on update cascade,
@@ -326,7 +326,7 @@ create table wallet_transaction (
 
 create table subscribe (
         tracking_code VARCHAR(15),
-        id INTEGER,
+        id INTEGER not null,
         primary key (tracking_code),
         foreign key (tracking_code) references transaction (tracking_code) on delete cascade on update cascade,
         foreign key (id) references client (id) on delete cascade on update cascade
@@ -334,9 +334,9 @@ create table subscribe (
 
 create table issued_for (
         tracking_code VARCHAR(15),
-        id INTEGER,
-        cart_number INTEGER,
-        locked_number INTEGER,
+        id INTEGER not null,
+        cart_number INTEGER not null,
+        locked_number INTEGER not null,
         primary key (tracking_code),
         foreign key (tracking_code) references transaction (tracking_code) on delete cascade on update cascade,
         foreign key (id, cart_number, locked_number) references locked_shopping_cart (id, cart_number, locked_number) on delete cascade on update cascade
@@ -344,7 +344,7 @@ create table issued_for (
 
 create table deposits_into_wallet (
         tracking_code VARCHAR(15),
-        id INTEGER,
+        id INTEGER not null,
         amount INTEGER not null,
         primary key (tracking_code),
         foreign key (tracking_code) references bank_transaction (tracking_code) on delete cascade on update cascade,
